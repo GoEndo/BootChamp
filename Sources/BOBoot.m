@@ -27,7 +27,7 @@ static BOOL BORestart()
 #endif
 }
 
-static NSString* BOHelperSource()
+NSString* BOHelperSource(void)
 {
 	static NSString *src = nil;
 	if (!src) {
@@ -36,7 +36,7 @@ static NSString* BOHelperSource()
 	return src;
 }
 
-static NSString* BOHelperDestination()
+NSString* BOHelperDestination(void)
 {
 	static NSString *dest = nil;
 	if (!dest) {

@@ -21,3 +21,5 @@ enum {
 
 BOOL BOAuthorizationRequired(void);
 BOOL BOBoot(BOMedia *media, BOOL nextOnly, NSError **error, BOOL allowUI);
+NSString* BOHelperDestination(void);
+NSString* BOHelperSource(void);

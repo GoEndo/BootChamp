@@ -23,7 +23,28 @@ static int run() {
     }
     
     NSMutableArray *argv = [[[NSProcessInfo processInfo] arguments] mutableCopy];
-    if (argv.count % 2 != 1) {
+    if ([[argv objectAtIndex:1] isEqualToString:@"diskutil"]) {
+        [argv removeObjectAtIndex:0]; // pop argv[0]
+        [argv removeObjectAtIndex:0]; // pop argv[1]
+
+        NSString *output = nil;
+        int status = [NSTask launchTaskAtPath:@"/usr/sbin/diskutil" arguments:argv output:&output];
+        if (output) {
+            output = [output stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        }
+        if (status != 0) {
+            return die(@"Can't mount EFI partition.");;
+        }
+        [[NSFileHandle fileHandleWithStandardOutput] writeData: [output dataUsingEncoding: NSNEXTSTEPStringEncoding]];
+        /*
+        if (launchTask(diskutil, @[@"info", @"-plist", diskID], &output) != 0) {
+            BOLog(@"%s: can't get info for %@: %@", __FUNCTION__, diskID, output);
+            return die(@"Can't mount EFI partition.");;
+        }
+         */
+        return EXIT_SUCCESS;
+    }
+    else if (argv.count % 2 != 1) {
         for( NSProcessInfo *a in argv ) {
             NSLog( @"Args = %@", a);
         }

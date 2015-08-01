@@ -10,7 +10,10 @@
 #import "BOLog.h"
 #import "BOTaskAdditions.h"
 #import "BOMedia.h"
+#import "BOBoot.h"
 
+static NSString *const BOBootErrorDomain = @"BOBootErrorDomain";
+/*
 static int launchTask(NSString *path, NSArray *arguments, NSString **output)
 {
     int ret = [NSTask launchTaskAtPath:path arguments:arguments output:output];
@@ -19,15 +22,52 @@ static int launchTask(NSString *path, NSArray *arguments, NSString **output)
     }
     return ret;
 }
-
-static BOOL diskMountPoint(NSString *diskutil, NSString *diskID, NSString **mountPoint)
+*/
+static BOOL diskMountPoint(NSString *diskID, NSString **mountPoint)
 {
+    NSError *error;
     *mountPoint = nil;
     NSString *output = nil;
+    NSString *toolDest = BOHelperDestination();
+    if (BOAuthorizationRequired()) {
+        NSString *prompt = [NSString stringWithFormat:NSLocalizedString(@"Administrative access is needed to install Helper.", "")];
+        BOTaskReturn ret = [NSTask launchTaskAsRootAtPath:[[NSBundle mainBundle] pathForAuxiliaryExecutable:@"BOHelperInstaller"] arguments:@[BOHelperSource(), toolDest] prompt:prompt output:&output];
+        switch (ret) {
+            case BOTaskLaunched:
+                if (output && [output length] > 0) {
+                    if (error) {
+                        error = [NSError errorWithDomain:BOBootErrorDomain code:BOBootInstallationFailed userInfo:@{NSLocalizedDescriptionKey : output}];
+                    }
+                    return NO;
+                }
+                break;
+            case BOTaskAuthorizationCanceled:
+                if (error) {
+                    error = [NSError errorWithDomain:BOBootErrorDomain code:BOBootAuthorizationCanceled userInfo:nil];
+                }
+                return NO;
+            case BOTaskError:
+                if (error) {
+                    error = [NSError errorWithDomain:BOBootErrorDomain code:BOBootAuthorizationError userInfo:output ? @{NSLocalizedDescriptionKey : output} : nil];
+                }
+                return NO;
+        }
+    }
+    BOLog(@"Helper path: %@", toolDest);
+    BOLog(@"Helper args: %@", @[@"diskutil", @"info", @"-plist", diskID]);
+    int status = [NSTask launchTaskAtPath:toolDest arguments:@[@"diskutil", @"info", @"-plist", diskID] output:&output];
+    BOLog(@"Helper status: %d", status);
+    BOLog(@"Helper output: %@", output);
+    if (status != 0) {
+        BOLog(@"%s: can't get info for %@: %@", __FUNCTION__, diskID, output);
+        return NO;
+    }
+    /*
     if (launchTask(diskutil, @[@"info", @"-plist", diskID], &output) != 0) {
         BOLog(@"%s: can't get info for %@: %@", __FUNCTION__, diskID, output);
         return NO;
     }
+     */
     NSData *data = [output dataUsingEncoding:NSUTF8StringEncoding];
     NSDictionary *dict = [NSPropertyListSerialization propertyListWithData:data options:0 format:nil error:nil];
     if (!dict || ![dict isKindOfClass:[NSDictionary class]]) {
@@ -43,19 +83,31 @@ static BOOL diskMountPoint(NSString *diskutil, NSString *diskID, NSString **moun
 
 static BOOL checkDisk(NSString *diskID)
 {
-    NSString *diskutil = @"/usr/sbin/diskutil";
+    //NSString *diskutil = @"/usr/sbin/diskutil";
     BOOL unmountEFI = NO;
     NSString *mountPoint = nil;
-    if (!diskMountPoint(diskutil, diskID, &mountPoint)) {
+    if (!diskMountPoint(diskID, &mountPoint)) {
         return NO;
     }
     if (!mountPoint) {
+        NSString *toolDest = BOHelperDestination();
         NSString *output = nil;
+        BOLog(@"Helper path: %@", toolDest);
+        BOLog(@"Helper args: %@", @[@"diskutil", @"mount", @"readOnly", diskID]);
+        int status = [NSTask launchTaskAtPath:toolDest arguments:@[@"diskutil", @"mount", @"readOnly", diskID] output:&output];
+        BOLog(@"Helper status: %d", status);
+        BOLog(@"Helper output: %@", output);
+        if (status != 0) {
+            BOLog(@"%s: can't mount %@: %@", __FUNCTION__, diskID, output);
+            return NO;
+        }
+        /*
         if (launchTask(diskutil, @[@"mount", @"readOnly", diskID], &output) != 0) {
             BOLog(@"%s: can't mount %@: %@", __FUNCTION__, diskID, output);
             return NO;
         }
-        if (!diskMountPoint(diskutil, diskID, &mountPoint) || !mountPoint) {
+         */
+        if (!diskMountPoint(diskID, &mountPoint) || !mountPoint) {
             return NO;
         }
         unmountEFI = YES;
@@ -82,7 +134,17 @@ static BOOL checkDisk(NSString *diskID)
     if (unmountEFI) {
         // We don't care when/if this finishes
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            (void)launchTask(diskutil, @[@"unmount", diskID], nil);
+            NSString *toolDest = BOHelperDestination();
+            NSString *output = nil;
+            BOLog(@"Helper path: %@", toolDest);
+            BOLog(@"Helper args: %@", @[@"diskutil", @"unmount", @"", diskID]);
+            int status = [NSTask launchTaskAtPath:toolDest arguments:@[@"diskutil", @"unmount", diskID] output:&output];
+            BOLog(@"Helper status: %d", status);
+            BOLog(@"Helper output: %@", output);
+            if (status != 0) {
+                BOLog(@"%s: can't unmount %@: %@", __FUNCTION__, diskID, output);
+            }
+            //(void)launchTask(diskutil, @[@"unmount", diskID], nil);
         });
     }
     
