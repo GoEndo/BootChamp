@@ -11,6 +11,8 @@
 #import "BOBoot.h"
 #import "BOLog.h"
 
+#define BOPrefsNextOnly			@"NextOnly"
+
 static int restart()
 {
     BOStatusMenuController *controller = [[BOStatusMenuController alloc] init];
@@ -19,7 +21,7 @@ static int restart()
     NSError *err = nil;
     if (!media || media.count == 0) {
         return BOBootInvalidMediaError + 1;
-    } else if (!BOBoot([media objectAtIndex:0], &err, NO)) {
+    } else if (!BOBoot([media objectAtIndex:0], [[NSUserDefaults standardUserDefaults] boolForKey:BOPrefsNextOnly], &err, NO)) {
         return (int)err.code + 1;
     }
     return 0;

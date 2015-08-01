@@ -116,7 +116,7 @@ BOOL BOAuthorizationRequired(void)
     return NO;
 }
 
-BOOL BOBoot(BOMedia *media, NSError **error, BOOL allowUI)
+BOOL BOBoot(BOMedia *media, BOOL nextOnly, NSError **error, BOOL allowUI)
 {
 	if (!media) {
         if (error) {
@@ -173,7 +173,11 @@ BOOL BOBoot(BOMedia *media, NSError **error, BOOL allowUI)
 	}
     [args addObject:@"-legacy"];
     [args addObject:media.legacy ? @"yes" : @"no"];
-	
+    [args addObject:@"-nextonly"];
+    [args addObject:nextOnly ? @"yes" : @"no"];
+    	// --nextonly used to be a user-settable preference in 1.2 and previous versions,
+    	// but in 1.2.1 it was removed, but I want it back!
+    
     BOLog(@"Helper path: %@", toolDest);
     BOLog(@"Helper args: %@", [args description]);
 	int status = [NSTask launchTaskAtPath:toolDest arguments:args output:&output];

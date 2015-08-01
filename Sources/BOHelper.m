@@ -24,12 +24,16 @@ static int run() {
     
     NSMutableArray *argv = [[[NSProcessInfo processInfo] arguments] mutableCopy];
     if (argv.count % 2 != 1) {
-        return die(@"Invalid number of arguments.");
+        for( NSProcessInfo *a in argv ) {
+            NSLog( @"Args = %@", a);
+        }
+        return die( @"Invalid number of arguments. %lu",  argv.count);
     }
     [argv removeObjectAtIndex:0]; // pop argv[0]
     NSString *mode = nil;
     NSString *media = nil;
     NSString *legacy = nil;
+    NSString *nextonly = nil;
     while (argv.count > 0) {
         NSString *option = [argv objectAtIndex:0];
         NSString *value = [argv objectAtIndex:1];
@@ -42,6 +46,8 @@ static int run() {
             media = value;
         } else if ([option isEqualToString:@"legacy"]) {
             legacy = value;
+        } else if ([option isEqualToString:@"nextonly"]) {
+            nextonly = value;
         } else {
             die(@"Invalid arg %@", option);
         }
@@ -69,7 +75,9 @@ static int run() {
         [taskArgs addObject:@"--legacy"];
     }
     [taskArgs addObject:@"--setBoot"];
-    [taskArgs addObject:@"--nextonly"];
+    if ([nextonly isEqualToString:@"yes"]) {
+        [taskArgs addObject:@"--nextonly"];
+    }
     [taskArgs addObject:@"--verbose"];
     
     NSString *output = nil;

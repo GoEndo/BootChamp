@@ -17,6 +17,7 @@
 #import <Sparkle/Sparkle.h>
 
 #define BOPrefsLaunchAtStartup	@"LaunchAtStartup"
+#define BOPrefsNextOnly			@"NextOnly"
 
 @implementation BOStatusMenuController
 {
@@ -31,7 +32,7 @@
 
 + (void)initialize
 {
-	NSDictionary *defaults = @{BOPrefsLaunchAtStartup : @YES};
+    NSDictionary *defaults = @{BOPrefsLaunchAtStartup : @YES, BOPrefsNextOnly : @YES};
 	[[NSUserDefaults standardUserDefaults] registerDefaults:defaults];
 }
 
@@ -274,7 +275,13 @@
     if ([[NSUserDefaults standardUserDefaults] boolForKey:BOPrefsLaunchAtStartup]) {
 		[menuItem setState:NSOnState];
     }
-
+    menuItem = [prefsSubMenu addItemWithTitle:NSLocalizedString(@"Next restart only", "next restart only menu item") action:@selector(preferenceAction:) keyEquivalent:@""];
+    [menuItem setIndentationLevel:1];
+    [menuItem setRepresentedObject:BOPrefsNextOnly];
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:BOPrefsNextOnly]) {
+        [menuItem setState:NSOnState];
+    }
+    
 	[menu addItemWithTitle:NSLocalizedString(@"BootChamp Help", "help menu item") action:@selector(showHelp:) keyEquivalent:@""];
 	[menu addItemWithTitle:NSLocalizedString(@"Check for Updates\u2026", "check for updates menu item") action:@selector(checkforUpdates:) keyEquivalent:@""];
     [menu addItemWithTitle:NSLocalizedString(@"About BootChamp", "about menu item") action:@selector(showAbout:) keyEquivalent:@""];
@@ -293,7 +300,7 @@
 {
 	[NSApp activateIgnoringOtherApps:YES];
 	NSError *error = nil;
-    if (BOBoot([sender representedObject], &error, YES)) {
+    if (BOBoot([sender representedObject], [[NSUserDefaults standardUserDefaults] boolForKey:BOPrefsNextOnly], &error, YES)) {
 		return;
     }
 	[NSApp activateIgnoringOtherApps:YES]; // app may have gone inactive from auth dialog
