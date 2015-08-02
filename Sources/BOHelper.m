@@ -26,6 +26,11 @@ static int run() {
     if ([[argv objectAtIndex:1] isEqualToString:@"diskutil"]) {
         [argv removeObjectAtIndex:0]; // pop argv[0]
         [argv removeObjectAtIndex:0]; // pop argv[1]
+        
+        NSArray *white_list = @[@"info", @"mount", @"unmount"];
+        if( ![white_list containsObject:[argv objectAtIndex:0]]){
+            return die(@"Verb not allowed.");
+        }
 
         NSString *output = nil;
         int status = [NSTask launchTaskAtPath:@"/usr/sbin/diskutil" arguments:argv output:&output];
@@ -33,7 +38,7 @@ static int run() {
             output = [output stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
         }
         if (status != 0) {
-            return die(@"Can't mount EFI partition.");;
+            return die(@"Can't mount EFI partition.");
         }
         [[NSFileHandle fileHandleWithStandardOutput] writeData: [output dataUsingEncoding: NSNEXTSTEPStringEncoding]];
         /*
